@@ -12,7 +12,8 @@
   (let ((findings
           (uiop:symbol-call '#:cheque '#:source-check-run
                             (uiop:symbol-call '#:cheque '#:project-read root)
-                            :paths '("lisp-em.asd" "check.lisp" "src/package.lisp"
+                            :paths '("lisp-em.asd" "check.lisp"
+                                     "checks/lisp-em-check-tools.asd" "src/package.lisp"
                                      "src/protocol.lisp" "src/transport.lisp"
                                      "tests/tests.lisp" "README.md")
                             :parinfer-library
