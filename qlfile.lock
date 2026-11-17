@@ -9,7 +9,7 @@
 ("cheque" .
  (:class qlot/source/git:source-git
   :initargs (:remote-url "https://github.com/lambda-symbolics/cheque.git")
-  :version "git-f6130a23186fe20c0bf44e446c9c2dd69b90073e"))
+  :version "git-1b93b8be38bb6999a818e7343eed1624555dd019"))
 ("trivial-glob" .
  (:class qlot/source/git:source-git
   :initargs (:remote-url "https://github.com/fukamachi/trivial-glob.git" :ref "0c2675d9452ed164970f2fc4a0e41784ebee819a")
