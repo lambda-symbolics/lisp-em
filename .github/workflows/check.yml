@@ -18,12 +18,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y sbcl cargo build-essential curl git tar
-      - name: Install Qlot
+      - name: Install Quicklisp and Qlot
         run: |
-          curl --fail --location https://qlot.tech/installer --output "$RUNNER_TEMP/qlot-installer"
-          QLOT_BIN_DIR="$HOME/.local/bin" sh "$RUNNER_TEMP/qlot-installer"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-      - name: Install development dependencies
-        run: qlot install
+          curl --fail --location https://beta.quicklisp.org/quicklisp.lisp --output "$RUNNER_TEMP/quicklisp.lisp"
+          sbcl --noinform --non-interactive --load "$RUNNER_TEMP/quicklisp.lisp" --eval '(quicklisp-quickstart:install)'
+          sbcl --noinform --non-interactive --load "$HOME/quicklisp/setup.lisp" --eval '(ql:quickload :qlot)'
+      - name: Install dependencies
+        run: ./script/bootstrap
       - name: Run tests and source checks
-        run: sbcl --noinform --no-userinit --no-sysinit --script check.lisp
+        run: ./script/check

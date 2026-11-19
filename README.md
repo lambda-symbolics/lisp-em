@@ -43,17 +43,17 @@ request's result or primary failure.
 
 ## Checks
 
-Install development dependencies with Qlot, then run:
+Install Quicklisp and Qlot, then run:
 
 ```sh
-qlot install
-sbcl --noinform --no-userinit --no-sysinit --script check.lisp
+./script/bootstrap
+./script/check
 ```
 
-The check runs the library's tests and cheque. Development dependencies are
-listed in `qlfile`; none are part of the runtime ASDF system. For tests alone,
-load this checkout's ASD and run `(asdf:test-system :lisp-em)` in an environment
-with `trivial-gray-streams` and `sb-posix` available.
+The check runs the library's tests and cheque. Development tools are listed in
+`checks/qlfile` and installed in the user cache. For tests alone, load this
+checkout's ASD and run `(asdf:test-system :lisp-em)` in an environment with
+`trivial-gray-streams` and `sb-posix` available.
 
 Tests cover wire encoding, EOF and chunk assembly, exact and aggregate limits,
 a generated billion-character line stopped at limit + 1, borrowed-stream and
