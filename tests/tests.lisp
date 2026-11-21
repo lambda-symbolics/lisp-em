@@ -115,8 +115,8 @@
         (check (= closed (if (eq stage ':connect) 0 1)) "Close exactly one acquired connection.")))))
 
 #-win32
-(defun socket-test (reply &key timeout)
-  "Run one native fake-server roundtrip, releasing the fixture's listener."
+(defun socket-test (reply &key timeout function)
+  "Answer one native roundtrip, calling FUNCTION with its path when supplied."
   (let* ((path     (merge-pathnames (format nil "lisp-em-~D-~D.socket" (sb-posix:getpid) (random 1000000))
                                    (uiop:temporary-directory)))
          (listener (make-instance 'sb-bsd-sockets:local-socket :type ':stream))
@@ -139,25 +139,73 @@
                                  (sleep 0.2)
                                  (progn (write-string reply stream) (finish-output stream))))
                         (sb-bsd-sockets:socket-close connection))))))
-           (let ((result (if timeout
-                             (expect-error ':timeout (lambda () (lisp-em:evaluate path "(foo λ)" :timeout 0.05)))
-                             (lisp-em:evaluate path "(foo λ)"))))
+           (let ((result (cond
+                           (function
+                            (funcall function path))
+                           (timeout
+                            (expect-error ':timeout (lambda () (lisp-em:evaluate path "(foo λ)" :timeout 0.05))))
+                           (t
+                            (lisp-em:evaluate path "(foo λ)")))))
              (sb-thread:join-thread thread)
              (setf thread nil)
-             (check (equal request "-eval (foo&_λ) ") "Native request has quoting and trailing space.")
+             (unless function
+               (check (equal request "-eval (foo&_λ) ") "Native request has quoting and trailing space."))
              result))
       (when thread
         (sb-thread:join-thread thread :timeout 2 :default nil))
       (sb-bsd-sockets:socket-close listener)
       (when (probe-file path) (delete-file path)))))
 
+#-win32
+(defun json-socket-tests ()
+  "Decode UTF-8 JSON values and reject malformed replies through the public client."
+  (flet ((call (printed)
+           "Read one printed value from a fake server."
+           (socket-test (format nil "-print ~A~%" (lisp-em:quote-argument printed))
+                        :function (lambda (path) (lisp-em:evaluate-json path "t"))))
+
+         (printed (json)
+           "Encode JSON as Emacs's printed base64 string."
+           (format nil "~S" (cl-base64:usb8-array-to-base64-string
+                             (sb-ext:string-to-octets json :external-format ':utf-8)))))
+    (check (= 1 (gethash "λ" (call (printed "{\"λ\":1}")))) "UTF-8 JSON object.")
+    (dolist (case (list (list "[]" #()) (list "[1,2]" #(1 2))
+                       (list "\"λ\"" "λ") (list "42" 42)
+                       (list "true" t) (list "false" (argo:json-false)) (list "null" nil)))
+      (check (equalp (second case) (call (printed (first case)))) "JSON value shape."))
+    (dolist (reply (list "not-a-string" "\"!\"" "\"/w==\""
+                        (printed "not JSON") (printed "{} trailing")))
+      (expect-error ':protocol (lambda () (call reply))))))
+
+(defun json-elisp-tests ()
+  "Exercise UTF-8 argument binding as data in real Emacs when it is installed."
+  (let ((emacs (loop for directory in (remove nil (uiop:getenv-pathnames "PATH" :ensure-directory t))
+                    thereis (loop for name in '("emacs" "emacs.exe")
+                                  for candidate = (merge-pathnames name directory)
+                                  when (uiop:file-exists-p candidate)
+                                    return candidate))))
+    (if emacs
+        (let* ((arguments (list (format nil "λ😀~%quotes: \" and \\ and &")
+                                "\") (setq lisp-em-injected t) (\""))
+               (body      "(vector a0 a1 (if (boundp 'lisp-em-injected) lisp-em-injected :null))")
+               (reply     (uiop:run-program
+                           (list (uiop:native-namestring emacs) "--quick" "--batch" "--eval"
+                                 (format nil "(prin1 ~A)" (lisp-em::client--json-form body arguments)))
+                           :output ':string :error-output ':string :external-format ':utf-8))
+               (value     (lisp-em::client--decode-json reply)))
+          (check (equalp value (vector (first arguments) (second arguments) nil))
+                 "String arguments preserve Unicode and syntax characters without evaluation."))
+        (format t "~&lisp-em: real Emacs argument-binding check skipped; no executable.~%"))))
+
 (defun run-tests ()
   "Run the protocol and ownership cases, plus native transport where supported."
   (let ((*checks* 0))
     (protocol-tests)
     (ownership-tests)
+    (json-elisp-tests)
     #-win32
     (progn
+      (json-socket-tests)
       (check (equal "42" (socket-test (format nil "-print 42~%"))) "Native roundtrip.")
       (socket-test "" :timeout t)
       (expect-error ':unavailable (lambda () (lisp-em:evaluate #P"/no-such-lisp-em-server" "t"))))

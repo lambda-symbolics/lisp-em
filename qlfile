@@ -1,1 +1,4 @@
 ql trivial-gray-streams 2026-01-01
+ql cl-base64 2026-01-01
+
+git argo https://github.com/lambda-symbolics/argo.git :ref ff1d0643973278e3b282825fbdc604c1256070a2

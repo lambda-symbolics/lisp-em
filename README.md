@@ -33,6 +33,26 @@ Use `quote-argument` and `unquote-argument` for the protocol's ampersand
 encoding. These are wire encoders, not Emacs Lisp string escaping functions.
 Choose the server and authorize the code before calling `evaluate`.
 
+## JSON values and string arguments
+
+Call `evaluate-json` with a socket, an Emacs Lisp body and optional `:arguments`
+list of strings. In the body, refer to the strings as `a0`, `a1`, and so on.
+The strings are bound as UTF-8 data rather than inserted as Lisp source.
+
+```lisp
+(lisp-em:evaluate-json socket "(vector a0 (length a0))"
+                       :arguments (list "λ"))
+;; => #("λ" 1)
+```
+
+The body must return a value accepted by Emacs's `json-serialize`: a plist,
+vector, string, number, `t`, `:false` or `:null`. The result is decoded with Argo:
+objects become EQUAL hash tables, arrays vectors, true `t`, false the marker
+from `argo:json-false`, and null `nil`. Accept or reject value shapes in the
+caller. `:timeout` and `:maximum-reply` have the same meaning as in `evaluate`.
+Unreadable printed strings, base64, UTF-8 and JSON signal `emacs-client-error`
+with reason `:protocol`; inspect its cause for the decoding failure.
+
 ## Failures
 
 Catch `emacs-client-error`. Read `emacs-client-error-reason`,
@@ -57,8 +77,10 @@ checkout's ASD and run `(asdf:test-system :lisp-em)` in an environment with
 
 Tests cover wire encoding, EOF and chunk assembly, exact and aggregate limits,
 a generated billion-character line stopped at limit + 1, borrowed-stream and
-owned-socket cleanup transitions, and native fake-server roundtrips/timeouts.
-The native socket cases are omitted on unsupported hosts.
+owned-socket cleanup transitions, native fake-server roundtrips/timeouts, and
+UTF-8 JSON values and malformed replies. Argument binding is exercised in real
+Emacs when an executable is available. Native socket cases are omitted on
+unsupported hosts.
 
 ISC licensed. Protocol implementation originally extracted from Autolith's
 `src/emacs/server.lisp` at baseline `40270fc8`, with incremental reply limits

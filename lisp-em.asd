@@ -3,11 +3,12 @@
   :author      "Lambda Symbolics OÜ"
   :license     "ISC"
   :version     "0.1.0"
-  :depends-on  (#:uiop #:sb-bsd-sockets)
+  :depends-on  (#:uiop #:sb-bsd-sockets #:cl-base64 #:argo)
   :serial      t
   :components  ((:file "src/package")
                 (:file "src/protocol")
-                (:file "src/transport"))
+                (:file "src/transport")
+                (:file "src/json"))
   :in-order-to ((asdf:test-op (asdf:test-op #:lisp-em/tests))))
 
 (asdf:defsystem #:lisp-em/tests

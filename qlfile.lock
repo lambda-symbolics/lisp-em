@@ -6,3 +6,11 @@
  (:class qlot/source/ql:source-ql
   :initargs (:%version "2026-01-01")
   :version "ql-2024-10-12"))
+("cl-base64" .
+ (:class qlot/source/ql:source-ql
+  :initargs (:%version "2026-01-01")
+  :version "ql-2020-10-16"))
+("argo" .
+ (:class qlot/source/git:source-git
+  :initargs (:remote-url "https://github.com/lambda-symbolics/argo.git" :ref "ff1d0643973278e3b282825fbdc604c1256070a2")
+  :version "git-ff1d0643973278e3b282825fbdc604c1256070a2"))
